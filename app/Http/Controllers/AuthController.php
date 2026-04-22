@@ -2,60 +2,46 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use App\Models\AuditLog;
+use App\Http\Requests\LoginRequest;
+use App\Services\AuthService;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
+    protected AuthService $authService;
+
+    public function __construct(AuthService $authService)
     {
-        // 1. Validar los datos de entrada
-        $request->validate([
-            'document_number' => 'required|string',
-            'password' => 'required|string',
-        ]);
+        $this->authService = $authService;
+    }
 
-        // 2. Intentar autenticar (usamos document_number en lugar de email)
-        if (!Auth::attempt($request->only('document_number', 'password'))) {
+    /**
+     * Inicia sesión de un usuario.
+     */
+    public function login(LoginRequest $request): JsonResponse
+    {
+        try {
+            $result = $this->authService->login(
+                $request->validated(),
+                $request->ip(),
+                $request->userAgent()
+            );
+
             return response()->json([
-                'message' => 'Credenciales incorrectas.'
-            ], 401);
-        }
+                'message'      => 'Login exitoso',
+                'access_token' => $result['token'],
+                'token_type'   => 'Bearer',
+                'user'         => [
+                    'document_number' => $result['user']->document_number,
+                    'role'            => $result['user']->role,
+                ]
+            ], 200);
 
-        $user = Auth::user();
-
-        // 3. Validar si el usuario está activo (cesado no entra)
-        if (!$user->is_active) {
-            // Revocamos la sesión que Auth::attempt acaba de iniciar
-            Auth::logout();
+        } catch (HttpException $e) {
             return response()->json([
-                'message' => 'Usuario inactivo. Comuníquese con administración.'
-            ], 403);
+                'message' => $e->getMessage()
+            ], $e->getStatusCode());
         }
-
-        // 4. Generar el Token para Vue/Quasar
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        // 5. Registrar la Auditoría (¡El blindaje legal en acción!)
-        AuditLog::query()->create([
-            'user_id' => $user->id,
-            'action' => 'logged_in',
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-
-        // 6. Retornar la respuesta exitosa
-        return response()->json([
-            'message' => 'Login exitoso',
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => [
-                'id' => $user->id,
-                'document_number' => $user->document_number,
-                'role' => $user->role,
-            ]
-        ]);
     }
 }

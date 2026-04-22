@@ -9,9 +9,9 @@ Route::post('/login', [AuthController::class, 'login']);
 // Rutas protegidas (Requieren Token de sesión)
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Obtener los datos del usuario logueado
+    // Obtener los datos del usuario logueado sanitizados
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        return new \App\Http\Resources\UserResource($request->user());
     });
 
     // Rutas de Documentos
