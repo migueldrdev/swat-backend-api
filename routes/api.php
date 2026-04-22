@@ -16,5 +16,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rutas de Documentos
     Route::post('/documents', [DocumentController::class, 'store']);
+    Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
 
 });

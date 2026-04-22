@@ -2,60 +2,59 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Document;
-use App\Models\AuditLog;
-use App\Models\User;
-use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\StoreDocumentRequest;
+use App\Http\Requests\DestroyDocumentRequest;
+use App\Services\DocumentService;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class DocumentController extends Controller
 {
-    // Método para subir un documento (Solo para Administradores)
-    public function store(Request $request)
+    protected DocumentService $documentService;
+
+    public function __construct(DocumentService $documentService)
     {
-        // 1. Verificamos que quien intenta subir sea Administrador
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Acceso denegado. Solo administradores.'], 403);
-        }
+        $this->documentService = $documentService;
+    }
 
-        // 2. Validamos los datos entrantes
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'title' => 'required|string|max:255',
-            'type' => 'required|string', // boleta, alta, baja, contrato
-            'file' => 'required|mimes:pdf|max:5120', // Solo PDF, máximo 5MB
-        ]);
-
-        // 3. Subimos el archivo a Supabase (S3)
-        // Lo guardamos en una carpeta con el DNI/Documento del trabajador para mantener orden
-        $worker = User::query()->findOrFail($request->user_id);
-        $folderPath = 'trabajadores/' . $worker->document_number;
-
-        // Esto sube el archivo y nos devuelve la ruta segura
-        $path = $request->file('file')->store($folderPath, 's3');
-
-        // 4. Guardamos el registro en la base de datos
-        $document = Document::query()->create([
-            'user_id' => $worker->id,
-            'title' => $request->title,
-            'file_path' => $path,
-            'type' => $request->type,
-        ]);
-
-        // 5. Registramos la auditoría de quién subió el documento
-        AuditLog::query()->create([
-            'user_id' => $request->user()->id, // El ID del administrador
-            'document_id' => $document->id,
-            'action' => 'uploaded',
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-
-        // TODO: Aquí en el futuro llamaremos a la función para enviar el correo al trabajador
+    /**
+     * Sube un nuevo documento (Solo para Administradores)
+     */
+    public function store(StoreDocumentRequest $request): JsonResponse
+    {
+        // La validación de permisos (authorize) y reglas está delegada en StoreDocumentRequest
+        $document = $this->documentService->storeDocument(
+            $request->validated(),
+            $request->file('file'),
+            $request->user(),
+            $request->ip(),
+            $request->userAgent()
+        );
 
         return response()->json([
-            'message' => 'Documento subido y registrado con éxito',
+            'message'  => 'Documento subido y registrado con éxito',
             'document' => $document
         ], 201);
+    }
+
+    /**
+     * Borra lógicamente el documento por ID (Solo Administradores)
+     */
+    public function destroy(DestroyDocumentRequest $request, $id): JsonResponse
+    {
+        try {
+            $this->documentService->destroyDocument(
+                $id,
+                $request->user(),
+                $request->ip(),
+                $request->userAgent()
+            );
+
+            return response()->json(['message' => 'Documento eliminado correctamente.'], 200);
+
+        } catch (HttpException $e) {
+            // Manejamos el error emitido por el Service con su código HTTP
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+        }
     }
 }
