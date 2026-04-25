@@ -1,0 +1,56 @@
+{
+  "name": "SWAT Backend API v1",
+  "version": "1",
+  "items": [
+    {
+      "name": "Auth",
+      "items": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/login",
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"email\": \"admin@swat.com\",\n  \"password\": \"password\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "items": [
+        {
+          "name": "List Documents",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/documents",
+            "headers": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "Download Document",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/documents/1/download",
+            "headers": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "environments": [
+    {
+      "name": "Local (Sail)",
+      "variables": {
+        "base_url": "http://localhost",
+        "token": ""
+      }
+    }
+  ]
+}
