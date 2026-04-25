@@ -44,7 +44,8 @@ class DocumentService
             // Registrar auditoría
             $this->logAction($admin->id, $document->id, 'uploaded', $ipAddress, $userAgent);
 
-            // TODO: En el futuro enviamos correo
+            // Disparar notificación asíncrona
+            \App\Jobs\NotifyWorkerOfNewDocument::dispatch($document);
 
             return $document;
         });
@@ -87,6 +88,23 @@ class DocumentService
         if (Storage::disk('s3')->exists($document->file_path)) {
             Storage::disk('s3')->delete($document->file_path);
         }
+    }
+
+    /**
+     * Genera una URL temporal para descarga y registra la acción en auditoría.
+     */
+    public function getDownloadUrl($id, User $user, string $ipAddress, ?string $userAgent): string
+    {
+        $document = Document::findOrFail($id);
+
+        // Registro de auditoría (Prueba de entrega legal)
+        $this->logAction($user->id, $document->id, 'downloaded', $ipAddress, $userAgent);
+
+        // Generar URL firmada válida por 5 minutos
+        return Storage::disk('s3')->temporaryUrl(
+            $document->file_path,
+            now()->addMinutes(5)
+        );
     }
 
     /**

@@ -5,16 +5,40 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Http\Requests\DestroyDocumentRequest;
 use App\Services\DocumentService;
+use App\Http\Resources\DocumentResource;
+use App\Models\Document;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class DocumentController extends Controller
 {
+    use AuthorizesRequests;
+
     protected DocumentService $documentService;
 
     public function __construct(DocumentService $documentService)
     {
         $this->documentService = $documentService;
+    }
+
+    /**
+     * Lista los documentos del usuario (o todos si es admin)
+     */
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        $user = $request->user();
+
+        $query = Document::query();
+
+        // Si no es admin, solo ve los suyos
+        if ($user->role !== 'admin') {
+            $query->where('user_id', $user->id);
+        }
+
+        return DocumentResource::collection($query->latest()->paginate(20));
     }
 
     /**
@@ -33,8 +57,29 @@ class DocumentController extends Controller
 
         return response()->json([
             'message'  => 'Documento subido y registrado con éxito',
-            'document' => $document
+            'document' => new DocumentResource($document)
         ], 201);
+    }
+
+    /**
+     * Genera link de descarga y registra auditoría
+     */
+    public function download(Request $request, $id): JsonResponse
+    {
+        $document = Document::findOrFail($id);
+
+        $this->authorize('download', $document);
+
+        $url = $this->documentService->getDownloadUrl(
+            $id,
+            $request->user(),
+            $request->ip(),
+            $request->userAgent()
+        );
+
+        return response()->json([
+            'download_url' => $url
+        ]);
     }
 
     /**

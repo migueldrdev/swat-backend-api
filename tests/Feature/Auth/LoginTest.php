@@ -23,7 +23,7 @@ class LoginTest extends TestCase
         ]);
 
         // 2. Ejecutar la acción: Hacer la petición POST al login
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson('/api/v1/login', [
             'document_number' => '76543210',
             'password' => 'password123',
         ]);
@@ -49,7 +49,7 @@ class LoginTest extends TestCase
             'password' => Hash::make('password123'),
         ]);
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson('/api/v1/login', [
             'document_number' => '76543210',
             'password' => 'wrongpassword',
         ]);
@@ -65,7 +65,7 @@ class LoginTest extends TestCase
             'is_active' => false, // Usuario dado de baja
         ]);
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson('/api/v1/login', [
             'document_number' => '88888888',
             'password' => 'password123',
         ]);

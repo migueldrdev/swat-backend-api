@@ -40,6 +40,26 @@ class UserFactory extends Factory
     }
 
     /**
+     * Define el estado para Administradores
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
+        ]);
+    }
+
+    /**
+     * Define el estado para Trabajadores/Agentes
+     */
+    public function worker(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'worker',
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

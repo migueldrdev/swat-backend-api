@@ -33,6 +33,7 @@ class AuthController extends Controller
                 'access_token' => $result['token'],
                 'token_type'   => 'Bearer',
                 'user'         => [
+                    'id'              => $result['user']->id,
                     'document_number' => $result['user']->document_number,
                     'role'            => $result['user']->role,
                 ]

@@ -1,4 +1,4 @@
-# Proyecto: SWAT Protection 51 - Ecosistema Digital (Versión PRO)
+    # Proyecto: SWAT Protection 51 - Ecosistema Digital (Versión PRO)
 
 ## 🎯 Objetivo General
 Transformación digital del área de Recursos Humanos y Administración de una empresa de seguridad. El sistema automatiza la distribución de documentos laborales (Boletas, Contratos, Altas/Bajas) y sirve como un sistema inmutable de blindaje legal ante inspecciones gubernamentales (SUNAFIL).
